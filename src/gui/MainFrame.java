@@ -1,0 +1,603 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package gui;
+
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.GraphicsConfiguration;
+import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+import javax.swing.JTable;
+import javax.swing.UIManager;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableModel;
+import logic.FileDuplicateFinder;
+import logic.Task;
+
+/**
+ *
+ * @author jacosta
+ */
+public class MainFrame extends javax.swing.JFrame {
+
+    private File mSourceFolder;
+    private FileDuplicateFinder mFileDuplicateFinderThread;
+    private final Task mOnCompletionTask;
+    
+    private static final int COLUMN_FILE = 0;
+    private static final int COLUMN_GROUP = 1;
+    private static final int COLUMN_KEEP = 2;
+    private static final int COLUMN_DELETED = 3;
+    private LogFrame mLogPanel;
+     
+    /**
+     * Custom jtable renderer
+     */
+    public class HighlightTableCellRenderer extends DefaultTableCellRenderer {
+        private final Color SKY_BLUE = new Color(135,206,250);
+        private final Color CORNFLOWER_BLUE = new  Color(100,149,237);
+        
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column){
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+         
+            //-Check if the row is null
+            if (table.getModel() != null && table.getModel().getValueAt(row, 0) == null){
+               c.setBackground(SKY_BLUE);
+            }else if (isSelected){     
+                c.setBackground(CORNFLOWER_BLUE);
+            } else {
+                c.setBackground(Color.WHITE);
+            }
+            return c;
+        }
+    }
+    
+    /**
+     * Creates new form MainFrame
+     */
+    public MainFrame() {
+        initComponents();
+        //-Setup location of screen
+        setLocationRelativeTo(null); 
+        
+        //-Setup the icon
+        String iconPath = "/icons/icon-duplicate-32x32.png";
+        ImageIcon frameIcon = new ImageIcon(getClass().getResource(iconPath));
+        setIconImage(frameIcon.getImage());
+        
+        //-Customize the table
+        mTableDuplicates.setDefaultRenderer(Object.class, new HighlightTableCellRenderer());
+        JTableHeader header = mTableDuplicates.getTableHeader();
+        header.setOpaque(false);
+        header.setBackground(Color.LIGHT_GRAY);
+        header.setForeground(Color.BLACK);
+        
+        //-Setup the on completion task
+        mOnCompletionTask = new Task() {
+            @Override
+            public void execute() {
+                mButtonScan.setEnabled(true);
+                mButtonStop.setEnabled(false);
+                
+                DefaultTableModel model = (DefaultTableModel) mTableDuplicates.getModel();
+                int group_id = 1;
+                Map<String, List<String>> lists = mFileDuplicateFinderThread.getFileLists();
+                for (List<String> list : lists.values()) {
+                    //-If duplicated
+                    if (list.size() > 1) {
+                        mLogPanel.log("--\n");
+                        boolean keep = true;
+                        for (String filename : list) {
+                            model.addRow(new Object[]{filename, group_id, keep, false});
+                            keep = false;
+                            mLogPanel.log(filename + "\n");
+                        }
+                        model.addRow(new Object[]{null, null, false, false});
+                        ++group_id;
+                    }
+                } 
+            }
+        };
+        
+        //-Create log panel
+        mLogPanel = new LogFrame();
+        
+        GraphicsConfiguration config = this.getGraphicsConfiguration();
+        Rectangle bounds = config.getBounds();
+        Insets insets = Toolkit.getDefaultToolkit().getScreenInsets(config);
+
+        int x = bounds.x + bounds.width - insets.right - (this.getWidth() + mLogPanel.getWidth());
+        int y = bounds.y + insets.top + bounds.height - (this.getHeight());
+        this.setLocation(x/2, y/2);
+    }
+
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
+     */
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        mButtonExit = new javax.swing.JButton();
+        mSourceButton = new javax.swing.JButton();
+        mSourceTextField = new javax.swing.JTextField();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        mTableDuplicates = new javax.swing.JTable();
+        mButtonStop = new javax.swing.JButton();
+        mButtonScan = new javax.swing.JButton();
+        mButtonSaveLog = new javax.swing.JButton();
+        mButtonDeleteDuplicates = new javax.swing.JButton();
+        mProgressBar = new javax.swing.JProgressBar();
+        mCheckBoxHiddenFiles = new javax.swing.JCheckBox();
+        mButtonDisplayLog = new javax.swing.JButton();
+        mMenuBarMain = new javax.swing.JMenuBar();
+        mMenuFile = new javax.swing.JMenu();
+        mMenuItemExit = new javax.swing.JMenuItem();
+        mMenuAbout = new javax.swing.JMenu();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setTitle("Duplicate File Finder");
+
+        mButtonExit.setText("Exit");
+        mButtonExit.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mButtonExitActionPerformed(evt);
+            }
+        });
+
+        java.util.ResourceBundle bundle = java.util.ResourceBundle.getBundle("gui/Bundle"); // NOI18N
+        mSourceButton.setText(bundle.getString("MainFrame.mInputButton.text")); // NOI18N
+        mSourceButton.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mSourceButtonActionPerformed(evt);
+            }
+        });
+
+        mSourceTextField.setEditable(false);
+
+        mTableDuplicates.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+                "File", "Group", "Keep", "Deleted"
+            }
+        ) {
+            Class[] types = new Class [] {
+                java.lang.String.class, java.lang.String.class, java.lang.Boolean.class, java.lang.Boolean.class
+            };
+            boolean[] canEdit = new boolean [] {
+                false, false, true, false
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types [columnIndex];
+            }
+
+            public boolean isCellEditable(int rowIndex, int columnIndex) {
+                return canEdit [columnIndex];
+            }
+        });
+        mTableDuplicates.getTableHeader().setReorderingAllowed(false);
+        jScrollPane1.setViewportView(mTableDuplicates);
+        if (mTableDuplicates.getColumnModel().getColumnCount() > 0) {
+            mTableDuplicates.getColumnModel().getColumn(1).setMaxWidth(60);
+            mTableDuplicates.getColumnModel().getColumn(2).setPreferredWidth(60);
+            mTableDuplicates.getColumnModel().getColumn(2).setMaxWidth(60);
+            mTableDuplicates.getColumnModel().getColumn(3).setMaxWidth(60);
+        }
+
+        mButtonStop.setText("Stop");
+        mButtonStop.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mButtonStopActionPerformed(evt);
+            }
+        });
+
+        mButtonScan.setText("Scan");
+        mButtonScan.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mButtonScanActionPerformed(evt);
+            }
+        });
+
+        mButtonSaveLog.setText("Save scan");
+        mButtonSaveLog.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mButtonSaveLogActionPerformed(evt);
+            }
+        });
+
+        mButtonDeleteDuplicates.setText("Delete Duplicates");
+        mButtonDeleteDuplicates.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mButtonDeleteDuplicatesActionPerformed(evt);
+            }
+        });
+
+        mProgressBar.setStringPainted(true);
+
+        mCheckBoxHiddenFiles.setText("Hidden Files");
+
+        mButtonDisplayLog.setText("Display Log");
+        mButtonDisplayLog.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mButtonDisplayLogActionPerformed(evt);
+            }
+        });
+
+        mMenuFile.setMnemonic('F');
+        mMenuFile.setText("File");
+
+        mMenuItemExit.setText("Exit");
+        mMenuItemExit.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mMenuItemExitActionPerformed(evt);
+            }
+        });
+        mMenuFile.add(mMenuItemExit);
+
+        mMenuBarMain.add(mMenuFile);
+
+        mMenuAbout.setText("About");
+        mMenuBarMain.add(mMenuAbout);
+
+        setJMenuBar(mMenuBarMain);
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(mProgressBar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jScrollPane1)
+                            .addGroup(layout.createSequentialGroup()
+                                .addComponent(mButtonSaveLog, javax.swing.GroupLayout.PREFERRED_SIZE, 145, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(mButtonDeleteDuplicates, javax.swing.GroupLayout.PREFERRED_SIZE, 134, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(mButtonDisplayLog, javax.swing.GroupLayout.PREFERRED_SIZE, 139, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, Short.MAX_VALUE)))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(mButtonScan, javax.swing.GroupLayout.DEFAULT_SIZE, 94, Short.MAX_VALUE)
+                            .addComponent(mButtonStop, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(mButtonExit, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(mCheckBoxHiddenFiles, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, 91, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(mSourceButton, javax.swing.GroupLayout.DEFAULT_SIZE, 271, Short.MAX_VALUE)
+                        .addGap(28, 28, 28)
+                        .addComponent(mSourceTextField, javax.swing.GroupLayout.DEFAULT_SIZE, 520, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(mSourceButton)
+                    .addComponent(mSourceTextField, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(11, 11, 11)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 424, Short.MAX_VALUE)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(mButtonScan)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(mCheckBoxHiddenFiles)
+                        .addGap(18, 18, 18)
+                        .addComponent(mButtonStop)
+                        .addGap(0, 0, Short.MAX_VALUE)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(mButtonDeleteDuplicates, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(mButtonSaveLog)
+                        .addComponent(mButtonDisplayLog))
+                    .addComponent(mButtonExit, javax.swing.GroupLayout.PREFERRED_SIZE, 23, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(mProgressBar, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE))
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+    private void mSourceButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mSourceButtonActionPerformed
+        JFileChooser fc = new JFileChooser(new File("./"));
+        fc.setDialogTitle("Select Folder");
+        fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        int response = fc.showOpenDialog(fc);
+        switch (response) {
+            case JFileChooser.APPROVE_OPTION:
+                mSourceFolder = fc.getSelectedFile();
+                mSourceTextField.setText(mSourceFolder.getAbsolutePath());
+            break;
+
+            default:
+                mSourceTextField.setText("");
+            break;
+        }
+    }//GEN-LAST:event_mSourceButtonActionPerformed
+
+    private void mButtonExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mButtonExitActionPerformed
+        System.exit(0);
+    }//GEN-LAST:event_mButtonExitActionPerformed
+
+    private void mButtonScanActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mButtonScanActionPerformed
+        //-Check the user selected a folder first
+        if (mSourceFolder == null) {
+            String msg = "Please select the source folder first!!!";
+            JOptionPane.showMessageDialog(null, msg, "Information", JOptionPane.INFORMATION_MESSAGE, null);
+            return;
+        }
+        
+        //-Check the directory exists 
+        if (!mSourceFolder.exists()){
+            String msg = "The selected source folder does not exist!";
+            JOptionPane.showMessageDialog(null, msg, "Warning", JOptionPane.WARNING_MESSAGE, null);
+            return;
+        }
+            
+        //-Check the directory exists 
+        if (!mSourceFolder.isDirectory()){
+            String msg = "The selected source folder is not a directory!";
+            JOptionPane.showMessageDialog(null, msg, "Warning", JOptionPane.WARNING_MESSAGE, null);
+            return;
+        }
+        
+        //-Start the task
+        DefaultTableModel model = (DefaultTableModel) mTableDuplicates.getModel();
+        model.setRowCount(0);
+
+        mFileDuplicateFinderThread = new FileDuplicateFinder(mSourceFolder, mCheckBoxHiddenFiles.isSelected(), mProgressBar, mOnCompletionTask);
+        mFileDuplicateFinderThread.start();
+        mButtonStop.setEnabled(true);
+    }//GEN-LAST:event_mButtonScanActionPerformed
+
+    private void mButtonSaveLogActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mButtonSaveLogActionPerformed
+        //-Save the log to a file
+        JFileChooser jfc = new JFileChooser(new File("./"));
+        jfc.setSelectedFile(new File("duplicates.csv"));
+        int returnValue = jfc.showOpenDialog(null);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = jfc.getSelectedFile();
+            try {  
+                //-Save the table content
+                try (FileWriter fstream = new FileWriter(selectedFile, false)) {
+                    //-Save the table content to a file
+                    TableModel model = mTableDuplicates.getModel();
+                    fstream.write("File, Group, Keep\n");
+                    for (int i = 0; i < mTableDuplicates.getRowCount(); ++i) {
+                        if (model.getValueAt(i, 0) != null) {
+                            String line = model.getValueAt(i, 0) + "," +
+                                    model.getValueAt(i, 1) + "," +
+                                    model.getValueAt(i, 2) + "\n";
+                            fstream.write(line);
+                        }
+                    }
+                }
+                JOptionPane.showMessageDialog(null, "Log file saved", "Information", JOptionPane.INFORMATION_MESSAGE, null);
+            } catch (IOException ex) {
+                Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+        }
+    }//GEN-LAST:event_mButtonSaveLogActionPerformed
+
+    private void mButtonDeleteDuplicatesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mButtonDeleteDuplicatesActionPerformed
+        //Custom button text
+        Object[] options = {"Yes, move", "No, Delete", "Cancel"};
+        int option = JOptionPane.showOptionDialog(this,
+                "Would you like to move the files to a local trash directory?",
+                "Question",
+                JOptionPane.YES_NO_CANCEL_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]);
+        //-Check option
+        if (option == 2){
+            return;
+        }
+        
+        boolean move_files = (option == 0);
+        File move_directory = null;
+        //-Check move files
+        if (move_files){
+            JFileChooser fc = new JFileChooser(new File("./"));
+            fc.setDialogTitle("Select Folder");
+            fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int response = fc.showOpenDialog(fc);
+            switch (response) {
+                case JFileChooser.APPROVE_OPTION:
+                    move_directory = fc.getSelectedFile();
+                    break;
+
+                default:
+                    return;
+            }            
+        }
+                
+        //-Do move/delete on each file
+        DefaultTableModel model = (DefaultTableModel) mTableDuplicates.getModel();
+        int group_id = 1;
+        int count_keep = 0;
+        List<String> list_files = new LinkedList<>();
+        List<Integer> list_idx = new LinkedList<>();
+        for (int row_idx = 0; row_idx < mTableDuplicates.getRowCount(); ++row_idx) {
+            //-When group changes
+            if (model.getValueAt(row_idx, 0) == null) {
+                //-Check at least one file 
+                if (count_keep == 0){
+                    String msg = "On the group [" + group_id + "] at least one file MUST be kept"; 
+                    JOptionPane.showMessageDialog(null, msg, "Warning", JOptionPane.WARNING_MESSAGE, null); 
+                }else{
+                    //-Either delete of move
+                    for (String file_str: list_files){
+                        if (option == 0){
+                            mLogPanel.log("Moving " + file_str + "\n");
+                        }else{
+                            mLogPanel.log("Deleting " + file_str + "\n");
+                        }
+                    } 
+                    //-Mark as deleted
+                    for (Integer row_id: list_idx){
+                        model.setValueAt(true, row_id, 3);
+                    }
+                    
+                    //-Mark group for deletion
+                    model.setValueAt(true, row_idx, COLUMN_DELETED);
+                }
+                //-Reset for the group
+                ++group_id;
+                count_keep = 0;
+                list_files.clear();
+                list_idx.clear();
+            }else{
+                //-Ensure at least one file is selected for each group
+                if (true == (Boolean) model.getValueAt(row_idx, 2) ){
+                    ++count_keep;
+                }else{
+                    //-Add field for deletion
+                    list_files.add((String) model.getValueAt(row_idx, 0));
+                    list_idx.add(row_idx);
+                }
+            }
+        }        
+       
+          //-Cleanup delete files
+        boolean delete = false;
+        for (int row_idx = model.getRowCount() - 1; row_idx >= 0; --row_idx) {
+            //-If start of group
+            String filename = (String) model.getValueAt(row_idx, COLUMN_FILE);
+            if (filename == null) {
+                delete = (boolean) model.getValueAt(row_idx, COLUMN_DELETED);
+            }
+
+            if (delete & filename != null) {
+                boolean keep = (boolean) model.getValueAt(row_idx, COLUMN_KEEP);
+                if (!keep) {
+                    boolean op_success;
+                    File src_file = new File(filename);
+                    if (move_files) {
+                        mLogPanel.log("Moving file " + model.getValueAt(row_idx, COLUMN_FILE)+ "\n");
+                        File target_file = new File(move_directory, src_file.getName());
+                        op_success = src_file.renameTo(target_file);
+                    } else {
+                        op_success = src_file.delete();
+                    }
+                    if (op_success) {
+                        mLogPanel.log("File " + filename + " " + (move_files ? "moved" : "deleted") + " successfuly\n");
+                    } else {
+                        mLogPanel.log("File " + filename + " " + (move_files ? "moved" : "deleted") + " failed\n");
+                    }
+                }
+            }
+            if (delete) {
+                //-Remove the row from GUI
+                model.removeRow(row_idx);
+            }
+        }
+    }//GEN-LAST:event_mButtonDeleteDuplicatesActionPerformed
+
+    private void mButtonStopActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mButtonStopActionPerformed
+        mFileDuplicateFinderThread.terminate();
+        mButtonStop.setEnabled(false);
+    }//GEN-LAST:event_mButtonStopActionPerformed
+
+    private boolean mIsLogVisible=false;
+    private void mButtonDisplayLogActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mButtonDisplayLogActionPerformed
+        if (!mIsLogVisible){
+            mLogPanel.setLocation(this.getX()+ this.getWidth(), this.getY());
+            Dimension dimension = new Dimension();
+            dimension.height = this.getHeight();
+            dimension.width = mLogPanel.getWidth();
+            mLogPanel.setSize(dimension);
+            mLogPanel.setVisible(true);
+            mButtonDisplayLog.setText("Hide Log");
+            mIsLogVisible = true;
+        }else{
+            mIsLogVisible = false;
+            mLogPanel.setVisible(false);
+            mButtonDisplayLog.setText("Display Log");
+        }
+    }//GEN-LAST:event_mButtonDisplayLogActionPerformed
+
+    private void mMenuItemExitActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mMenuItemExitActionPerformed
+        System.exit(0);
+    }//GEN-LAST:event_mMenuItemExitActionPerformed
+
+    /**
+     * @param args the command line arguments
+     */
+    public static void main(String args[]) {
+        /* Set the Nimbus look and feel */
+        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
+        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
+         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
+         */
+        try {
+             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+//            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
+//                if ("Nimbus".equals(info.getName())) {
+//                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
+//                    break;
+//                }
+//            }
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | javax.swing.UnsupportedLookAndFeelException ex) {
+            java.util.logging.Logger.getLogger(MainFrame.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
+        //</editor-fold>
+        
+        //</editor-fold>
+
+        /* Create and display the form */
+        java.awt.EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                new MainFrame().setVisible(true);
+            }
+        });
+    }
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JButton mButtonDeleteDuplicates;
+    private javax.swing.JButton mButtonDisplayLog;
+    private javax.swing.JButton mButtonExit;
+    private javax.swing.JButton mButtonSaveLog;
+    private javax.swing.JButton mButtonScan;
+    private javax.swing.JButton mButtonStop;
+    private javax.swing.JCheckBox mCheckBoxHiddenFiles;
+    private javax.swing.JMenu mMenuAbout;
+    private javax.swing.JMenuBar mMenuBarMain;
+    private javax.swing.JMenu mMenuFile;
+    private javax.swing.JMenuItem mMenuItemExit;
+    private javax.swing.JProgressBar mProgressBar;
+    private javax.swing.JButton mSourceButton;
+    private javax.swing.JTextField mSourceTextField;
+    private javax.swing.JTable mTableDuplicates;
+    // End of variables declaration//GEN-END:variables
+}
